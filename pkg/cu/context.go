@@ -40,7 +40,10 @@ func NewContext(soPath string, opts ...ContextOpt) (context *Context, err error)
 	handle := pkcs11.New(soPath)
 	err = handle.Initialize()
 	if err != nil {
-		return
+		if err != pkcs11.Error(pkcs11.CKR_CRYPTOKI_ALREADY_INITIALIZED) {
+			return
+		}
+		err = nil
 	}
 
 	defer func() {
