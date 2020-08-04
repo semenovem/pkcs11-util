@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -378,6 +379,9 @@ func (self *csrCmd) Verify() error {
 	if !self.Parsed() {
 		return ErrMustBeParsed
 	}
+	if len(self.Args()) > 0 {
+		return ErrTooManyArguments
+	}
 	if self.publicLabel == "" {
 		return ErrPublicKeyLabelEmpty
 	}
@@ -394,12 +398,14 @@ func (self *csrCmd) Verify() error {
 		return err
 	}
 
+	r := regexp.MustCompile("\\s")
+
 	if self.dns != "" {
-		self.dnsNames = strings.Split(self.dns, ",")
+		self.dnsNames = strings.Split(r.ReplaceAllString(self.dns, ""), ",")
 	}
 
 	if self.ip != "" {
-		for _, s := range strings.Split(self.ip, ",") {
+		for _, s := range strings.Split(r.ReplaceAllString(self.ip, ""), ",") {
 			ip := net.ParseIP(s)
 			if ip == nil {
 				return fmt.Errorf("invalid IP address: %s", s)
