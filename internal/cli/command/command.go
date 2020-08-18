@@ -15,11 +15,12 @@ import (
 
 // Supported commands
 const (
-	Version            = "version"
-	List               = "list"
+	CertificateRequest = "certificateRequest"
 	Destroy            = "destroy"
 	Generate           = "generate"
-	CertificateRequest = "certificateRequest"
+	List               = "list"
+	Slots              = "slots"
+	Version            = "version"
 )
 
 // Supported keys
@@ -42,6 +43,12 @@ type Command interface {
 type (
 	// versionCmd prints out the app name and version
 	versionCmd struct{}
+
+	// slotsCmd contains Slots command arguments
+	slotsCmd struct {
+		*flag.FlagSet
+		lib string
+	}
 
 	// absctactCmd contains common fields
 	abstractCmd struct {
@@ -157,11 +164,12 @@ var commands map[string]Command = make(map[string]Command)
 
 func init() {
 	cmds := []Command{
-		newVersionCmd(),
-		newListCmd(),
+		newCsrCmd(),
 		newDestroyCmd(),
 		newGenerateCmd(),
-		newCsrCmd(),
+		newListCmd(),
+		newSlotsCmd(),
+		newVersionCmd(),
 	}
 	for _, c := range cmds {
 		commands[c.Name()] = c
@@ -178,6 +186,29 @@ func (*versionCmd) Name() string         { return Version }
 func (*versionCmd) Parse([]string) error { return nil }
 func (*versionCmd) Verify() error        { return nil }
 func (*versionCmd) Execute() error       { fmt.Printf("%s %s\n", appName, appVersion); return nil }
+
+func newSlotsCmd() Command {
+	const LibOptionUsage = "PKCS11 library path"
+
+	cmd := slotsCmd{
+		FlagSet: flag.NewFlagSet(Slots, flag.ContinueOnError),
+	}
+	cmd.StringVar(&cmd.lib, "lib", DefaultLib, LibOptionUsage)
+	cmd.StringVar(&cmd.lib, "l", DefaultLib, LibOptionUsage+" (shorthand)")
+	return &cmd
+}
+
+func (*slotsCmd) Name() string { return Slots }
+
+func (self *slotsCmd) Verify() error {
+	if !self.Parsed() {
+		return ErrMustBeParsed
+	}
+	if len(self.Args()) > 0 {
+		return ErrTooManyArguments
+	}
+	return nil
+}
 
 func newAbstractCmd(name string) *abstractCmd {
 	const LibOptionUsage = "PKCS11 library path"
@@ -200,21 +231,6 @@ func newAbstractCmd(name string) *abstractCmd {
 	cmd.before = func() error { return cmd.beforeFunc() }
 	cmd.after = func() error { return cmd.afterFunc() }
 	return &cmd
-}
-
-func (self *abstractCmd) Execute() error {
-	if !self.verified {
-		return ErrMustBeVerifyed
-	}
-	if self.exec == nil {
-		return ErrProcessorMustBeSet
-	}
-
-	if err := self.before(); err != nil {
-		return err
-	}
-	defer self.after()
-	return self.exec()
 }
 
 func newListCmd() Command {

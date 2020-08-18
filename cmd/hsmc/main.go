@@ -24,9 +24,10 @@ func usage() {
 `
 	commands := strings.Join([]string{
 		command.Version,
+		command.Slots,
+		command.List,
 		command.Generate,
 		command.CertificateRequest,
-		command.List,
 		command.Destroy,
 	}, "|")
 	app := os.Args[0]

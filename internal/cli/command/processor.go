@@ -17,6 +17,35 @@ import (
 	"vtb.ru/pkcs11-util/pkg/cu"
 )
 
+func (self *slotsCmd) Execute() (err error) {
+	handle := pkcs11.New(self.lib)
+	err = handle.Initialize()
+	if err != nil {
+		return
+	}
+
+	var slots []uint
+	slots, err = handle.GetSlotList(true)
+	if err != nil {
+		return
+	}
+
+	if len(slots) == 0 {
+		fmt.Printf("Not found")
+	}
+
+	var ti pkcs11.TokenInfo
+	for i, slot := range slots {
+		ti, err = handle.GetTokenInfo(slot)
+		if err != nil {
+			return
+		}
+		fmt.Printf("%3d Label=%-16s ManufacturerID=%s Model=%s SerialNumber=%s\n",
+			i, ti.Label, ti.ManufacturerID, ti.Model, ti.SerialNumber)
+	}
+	return
+}
+
 func (self *abstractCmd) beforeFunc() (err error) {
 	self.ctx, err = cu.NewContext(
 		self.lib,
@@ -29,6 +58,25 @@ func (self *abstractCmd) afterFunc() error {
 		self.ctx.Close()
 	}
 	return nil
+}
+
+func (self *abstractCmd) Execute() error {
+	if !self.verified {
+		return ErrMustBeVerifyed
+	}
+	if self.exec == nil {
+		return ErrProcessorMustBeSet
+	}
+
+	if self.before != nil {
+		if err := self.before(); err != nil {
+			return err
+		}
+	}
+	if self.after != nil {
+		defer self.after()
+	}
+	return self.exec()
 }
 
 func (self *listCmd) execFunc() error {
