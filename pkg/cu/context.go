@@ -96,6 +96,16 @@ func NewContext(soPath string, opts ...ContextOpt) (context *Context, err error)
 	return
 }
 
+// GetHandle returns HSM handle
+func (self *Context) GetHandle() *pkcs11.Ctx {
+	return self.handle
+}
+
+// GetSession returns HSM session
+func (self *Context) GetSession() pkcs11.SessionHandle {
+	return self.session
+}
+
 // GetSessionInfo returns information about open PKCS11 session
 func (self *Context) GetSessionInfo() (pkcs11.SessionInfo, error) {
 	return self.handle.GetSessionInfo(self.session)

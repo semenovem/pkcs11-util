@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/miekg/pkcs11"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"vtb.ru/pkcs11-util/pkg/cu"
 )
@@ -138,6 +139,35 @@ func (self *destroyCmd) execFunc() error {
 		}
 		fmt.Printf("destroyed handle=%v\n", o)
 	}
+	return nil
+}
+
+func (self *setPinCmd) execFunc() error {
+	fmt.Print("Enter new pin: ")
+	pin1, err := terminal.ReadPassword(0)
+	fmt.Println()
+	if err != nil {
+		return err
+	}
+
+	fmt.Print("Reenter pin: ")
+	pin2, err := terminal.ReadPassword(0)
+	fmt.Println()
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Equal(pin1, pin2) {
+		return ErrPinsDoesNotMatch
+	}
+
+	handle := self.ctx.GetHandle()
+	session := self.ctx.GetSession()
+	if err := handle.SetPIN(session, self.pin, string(pin1)); err != nil {
+		return err
+	}
+
+	fmt.Printf("Pin has been changed for slot: %s\n", self.slot)
 	return nil
 }
 

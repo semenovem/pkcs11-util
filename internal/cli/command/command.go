@@ -19,6 +19,7 @@ const (
 	Destroy            = "destroy"
 	Generate           = "generate"
 	List               = "list"
+	SetPin             = "setpin"
 	Slots              = "slots"
 	Version            = "version"
 )
@@ -77,6 +78,11 @@ type (
 		confirm bool
 	}
 
+	// setPinCmd contains SetPin command arguments
+	setPinCmd struct {
+		*abstractCmd
+	}
+
 	// generateCmd contains Generate command arguments
 	generateCmd struct {
 		*abstractCmd
@@ -122,7 +128,7 @@ type (
 		// signatureAlgorithm contains parsed signature algorith
 		signatureAlgorithm x509.SignatureAlgorithm
 
-		//	dns contains comma separated SAN DNS names
+		//  dns contains comma separated SAN DNS names
 		dns string
 		// dnsNames contains parsed SAN DNS names
 		dnsNames []string
@@ -143,12 +149,13 @@ var (
 var (
 	ErrCommonNameEmpty       = errors.New("Common name must not be empty")
 	ErrEllipticCurveEmpty    = errors.New("Elliptic curve must not be empty")
-	ErrIncorrectArguments    = errors.New("Incorrect argument(s)")
 	ErrIncorrectArgumentType = errors.New("Incorrect argument type")
+	ErrIncorrectArguments    = errors.New("Incorrect argument(s)")
 	ErrKeyTypeEmpty          = errors.New("Key type must not be empty")
 	ErrMustBeParsed          = errors.New("Must be parsed first")
 	ErrMustBeVerifyed        = errors.New("Must be verified first")
 	ErrNotEnoughArguments    = errors.New("Not enough arguments")
+	ErrPinsDoesNotMatch      = errors.New("Pins does not match")
 	ErrPrivateKeyLabelEmpty  = errors.New("Private key label must not be empty")
 	ErrProcessorMustBeSet    = errors.New("Processor must be set")
 	ErrPublicKeyLabelEmpty   = errors.New("Public key label must not be empty")
@@ -168,6 +175,7 @@ func init() {
 		newDestroyCmd(),
 		newGenerateCmd(),
 		newListCmd(),
+		newSetPinCmd(),
 		newSlotsCmd(),
 		newVersionCmd(),
 	}
@@ -276,6 +284,25 @@ func (self *destroyCmd) Verify() error {
 		if _, err := strconv.Atoi(a); err != nil {
 			return ErrIncorrectArgumentType
 		}
+	}
+	self.verified = true
+	return nil
+}
+
+func newSetPinCmd() Command {
+	cmd := setPinCmd{
+		abstractCmd: newAbstractCmd(SetPin),
+	}
+	cmd.exec = cmd.execFunc
+	return &cmd
+}
+
+func (self *setPinCmd) Verify() error {
+	if !self.Parsed() {
+		return ErrMustBeParsed
+	}
+	if len(self.Args()) > 0 {
+		return ErrTooManyArguments
 	}
 	self.verified = true
 	return nil

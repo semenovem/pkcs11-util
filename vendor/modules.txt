@@ -10,10 +10,15 @@ github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/testify v1.6.1
 ## explicit
 github.com/stretchr/testify/assert
+# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+## explicit
+golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 ## explicit
 # golang.org/x/sys v0.0.0-20190412213103-97732733099d
 ## explicit
+golang.org/x/sys/unix
+golang.org/x/sys/windows
 # google.golang.org/grpc v1.29.1
 ## explicit
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
