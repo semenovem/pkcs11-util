@@ -48,6 +48,16 @@ func (self *slotsCmd) Execute() (err error) {
 }
 
 func (self *abstractCmd) beforeFunc() (err error) {
+	if self.pin == "" {
+		fmt.Printf("Enter PIN: ")
+		var pin []byte
+		pin, err = terminal.ReadPassword(0)
+		if err != nil {
+			return
+		}
+		self.pin = string(pin)
+	}
+
 	self.ctx, err = cu.NewContext(
 		self.lib,
 		cu.WithSlotLabel(self.slot), cu.WithSlotPin(self.pin))
