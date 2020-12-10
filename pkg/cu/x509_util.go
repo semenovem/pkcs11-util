@@ -12,6 +12,11 @@ var wellKnownSignatureAlgoruthms = map[string]x509.SignatureAlgorithm{
 	"ECDSAWithSHA256": x509.ECDSAWithSHA256,
 	"ECDSAWithSHA384": x509.ECDSAWithSHA384,
 	"ECDSAWithSHA512": x509.ECDSAWithSHA512,
+	"MD5WithRSA":      x509.MD5WithRSA,
+	"SHA1WithRSA":     x509.SHA1WithRSA,
+	"SHA256WithRSA":   x509.SHA256WithRSA,
+	"SHA384WithRSA":   x509.SHA384WithRSA,
+	"SHA512WithRSA":   x509.SHA512WithRSA,
 }
 
 // GetSignatureAlgorithmName returns the name of the algorithm

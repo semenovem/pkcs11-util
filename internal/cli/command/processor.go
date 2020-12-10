@@ -18,8 +18,8 @@ import (
 	"vtb.ru/pkcs11-util/pkg/cu"
 )
 
-func (self *slotsCmd) Execute() (err error) {
-	handle := pkcs11.New(self.lib)
+func (c *slotsCmd) Execute() (err error) {
+	handle := pkcs11.New(c.lib)
 	err = handle.Initialize()
 	if err != nil {
 		return
@@ -47,52 +47,52 @@ func (self *slotsCmd) Execute() (err error) {
 	return
 }
 
-func (self *abstractCmd) beforeFunc() (err error) {
-	if self.pin == "" {
+func (c *abstractCmd) beforeFunc() (err error) {
+	if c.pin == "" {
 		fmt.Printf("Enter PIN: ")
 		var pin []byte
 		pin, err = terminal.ReadPassword(0)
 		if err != nil {
 			return
 		}
-		self.pin = string(pin)
+		c.pin = string(pin)
 	}
 
-	self.ctx, err = cu.NewContext(
-		self.lib,
-		cu.WithSlotLabel(self.slot), cu.WithSlotPin(self.pin))
+	c.ctx, err = cu.NewContext(
+		c.lib,
+		cu.WithSlotLabel(c.slot), cu.WithSlotPin(c.pin))
 	return
 }
 
-func (self *abstractCmd) afterFunc() error {
-	if self.ctx != nil {
-		self.ctx.Close()
+func (c *abstractCmd) afterFunc() error {
+	if c.ctx != nil {
+		c.ctx.Close()
 	}
 	return nil
 }
 
-func (self *abstractCmd) Execute() error {
-	if !self.verified {
+func (c *abstractCmd) Execute() error {
+	if !c.verified {
 		return ErrMustBeVerifyed
 	}
-	if self.exec == nil {
+	if c.exec == nil {
 		return ErrProcessorMustBeSet
 	}
 
-	if self.before != nil {
-		if err := self.before(); err != nil {
+	if c.before != nil {
+		if err := c.before(); err != nil {
 			return err
 		}
 	}
-	if self.after != nil {
-		defer self.after()
+	if c.after != nil {
+		defer c.after()
 	}
-	return self.exec()
+	return c.exec()
 }
 
-func (self *listCmd) execFunc() error {
+func (c *listCmd) execFunc() error {
 	var attrs []*pkcs11.Attribute
-	switch self.class {
+	switch c.class {
 	case "":
 	case "private":
 		attrs = append(attrs, pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY))
@@ -100,7 +100,7 @@ func (self *listCmd) execFunc() error {
 		attrs = append(attrs, pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY))
 	}
 
-	objs, err := cu.FindObjects(self.ctx, attrs...)
+	objs, err := cu.FindObjects(c.ctx, attrs...)
 	if err != nil {
 		return fmt.Errorf("Error: %w", err)
 	}
@@ -114,7 +114,7 @@ func (self *listCmd) execFunc() error {
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
 	}
 	for _, obj := range objs {
-		attributes, err := cu.GetAttributes(self.ctx, obj, template...)
+		attributes, err := cu.GetAttributes(c.ctx, obj, template...)
 		if err != nil {
 			return fmt.Errorf("Error: %w", err)
 		}
@@ -126,10 +126,10 @@ func (self *listCmd) execFunc() error {
 	return nil
 }
 
-func (self *destroyCmd) execFunc() error {
-	for _, a := range self.Args() {
+func (c *destroyCmd) execFunc() error {
+	for _, a := range c.Args() {
 		o, _ := strconv.Atoi(a)
-		if self.confirm {
+		if c.confirm {
 			fmt.Printf("Destroy handle %v (y/n/q [n])? ", o)
 			reader := bufio.NewReader(os.Stdin)
 			input, _ := reader.ReadString('\n')
@@ -144,7 +144,7 @@ func (self *destroyCmd) execFunc() error {
 				continue
 			}
 		}
-		if err := cu.DestroyObject(self.ctx, pkcs11.ObjectHandle(o)); err != nil {
+		if err := cu.DestroyObject(c.ctx, pkcs11.ObjectHandle(o)); err != nil {
 			return err
 		}
 		fmt.Printf("destroyed handle=%v\n", o)
@@ -152,7 +152,7 @@ func (self *destroyCmd) execFunc() error {
 	return nil
 }
 
-func (self *setPinCmd) execFunc() error {
+func (c *setPinCmd) execFunc() error {
 	fmt.Print("Enter new pin: ")
 	pin1, err := terminal.ReadPassword(0)
 	fmt.Println()
@@ -171,19 +171,19 @@ func (self *setPinCmd) execFunc() error {
 		return ErrPinsDoesNotMatch
 	}
 
-	handle := self.ctx.GetHandle()
-	session := self.ctx.GetSession()
-	if err := handle.SetPIN(session, self.pin, string(pin1)); err != nil {
+	handle := c.ctx.GetHandle()
+	session := c.ctx.GetSession()
+	if err := handle.SetPIN(session, c.pin, string(pin1)); err != nil {
 		return err
 	}
 
-	fmt.Printf("Pin has been changed for slot: %s\n", self.slot)
+	fmt.Printf("Pin has been changed for slot: %s\n", c.slot)
 	return nil
 }
 
-func (self *generateCmd) execFunc() error {
+func (c *generateCmd) execFunc() error {
 	// check if the labels already in use
-	objs, err := cu.FindObjects(self.ctx)
+	objs, err := cu.FindObjects(c.ctx)
 	if err != nil {
 		return fmt.Errorf("Error: %w", err)
 	}
@@ -191,30 +191,48 @@ func (self *generateCmd) execFunc() error {
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
 	}
 	for _, obj := range objs {
-		attributes, err := cu.GetAttributes(self.ctx, obj, labelTemplate...)
+		attributes, err := cu.GetAttributes(c.ctx, obj, labelTemplate...)
 		if err != nil {
 			return fmt.Errorf("Error: %w", err)
 		}
 		label := cu.AttributeToString(attributes[0])
-		if label == self.publicLabel || label == self.privateLabel {
+		if label == c.publicLabel || label == c.privateLabel {
 			return fmt.Errorf("Label already in use: %s", label)
 		}
 	}
 
-	template := cu.ECDSAKeyPairTemplate{
-		Curve:        self.curve,
-		PublicLabel:  self.publicLabel,
-		PrivateLabel: self.privateLabel,
-		Token:        self.token,
-		Sign:         self.sign,
-		Verify:       self.verify,
-		Encrypt:      self.encrypt,
-		Decrypt:      self.decrypt,
-		Sensitive:    self.sensitive,
-		Extractable:  self.extractable,
-		Modifiable:   self.modifiable,
+	var template interface{}
+	if c.keyType == KeyECDSA {
+		template = cu.ECDSAKeyPairTemplate{
+			Curve:        c.curve,
+			PublicLabel:  c.publicLabel,
+			PrivateLabel: c.privateLabel,
+			Token:        c.token,
+			Sign:         c.sign,
+			Verify:       c.verify,
+			Encrypt:      c.encrypt,
+			Decrypt:      c.decrypt,
+			Sensitive:    c.sensitive,
+			Extractable:  c.extractable,
+			Modifiable:   c.modifiable,
+		}
 	}
-	pub, prv, err := cu.NewGenerator(self.ctx).GenerateKeyPair(template)
+	if c.keyType == KeyRSA {
+		template = cu.RSAKeyPairTemplate{
+			Size:         c.keyBits,
+			PublicLabel:  c.publicLabel,
+			PrivateLabel: c.privateLabel,
+			Token:        c.token,
+			Sign:         c.sign,
+			Verify:       c.verify,
+			Encrypt:      c.encrypt,
+			Decrypt:      c.decrypt,
+			Sensitive:    c.sensitive,
+			Extractable:  c.extractable,
+			Modifiable:   c.modifiable,
+		}
+	}
+	pub, prv, err := cu.NewGenerator(c.ctx).GenerateKeyPair(template)
 	if err != nil {
 		return err
 	}
@@ -222,37 +240,37 @@ func (self *generateCmd) execFunc() error {
 	return nil
 }
 
-func (self *csrCmd) execFunc() (err error) {
-	key, err := cu.NewSigner(self.ctx, self.privateLabel, self.publicLabel)
+func (c *csrCmd) execFunc() (err error) {
+	key, err := cu.NewSigner(c.ctx, c.privateLabel, c.publicLabel)
 	if err != nil {
 		return
 	}
 
 	subject := pkix.Name{
-		CommonName: self.commonName,
+		CommonName: c.commonName,
 	}
 
-	if self.countryName != "" {
-		subject.Country = []string{self.countryName}
+	if c.countryName != "" {
+		subject.Country = []string{c.countryName}
 	}
-	if self.state != "" {
-		subject.Province = []string{self.state}
+	if c.state != "" {
+		subject.Province = []string{c.state}
 	}
-	if self.locality != "" {
-		subject.Locality = []string{self.locality}
+	if c.locality != "" {
+		subject.Locality = []string{c.locality}
 	}
-	if self.organizationName != "" {
-		subject.Organization = []string{self.organizationName}
+	if c.organizationName != "" {
+		subject.Organization = []string{c.organizationName}
 	}
-	if self.organizationalUnitName != "" {
-		subject.OrganizationalUnit = []string{self.organizationalUnitName}
+	if c.organizationalUnitName != "" {
+		subject.OrganizationalUnit = []string{c.organizationalUnitName}
 	}
 
 	csrTemplate := x509.CertificateRequest{
 		Subject:            subject,
-		DNSNames:           self.dnsNames,
-		IPAddresses:        self.ipAddresses,
-		SignatureAlgorithm: self.signatureAlgorithm,
+		DNSNames:           c.dnsNames,
+		IPAddresses:        c.ipAddresses,
+		SignatureAlgorithm: c.signatureAlgorithm,
 	}
 
 	csrCertificate, err := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, key)
@@ -261,9 +279,9 @@ func (self *csrCmd) execFunc() (err error) {
 	}
 
 	var out io.Writer
-	if self.out != "" {
+	if c.out != "" {
 		var file *os.File
-		file, err = os.OpenFile(self.out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		file, err = os.OpenFile(c.out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return
 		}
@@ -271,7 +289,7 @@ func (self *csrCmd) execFunc() (err error) {
 		defer func() {
 			file.Close()
 			if err != nil {
-				os.Remove(self.out)
+				os.Remove(c.out)
 				return
 			}
 			file.Close()

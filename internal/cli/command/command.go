@@ -27,6 +27,7 @@ const (
 // Supported keys
 const (
 	KeyECDSA = "ecdsa"
+	KeyRSA   = "rsa"
 )
 
 // Command defines the app command
@@ -87,6 +88,7 @@ type (
 	generateCmd struct {
 		*abstractCmd
 		keyType      string
+		keyBits      int
 		curve        string
 		publicLabel  string
 		privateLabel string
@@ -122,7 +124,7 @@ type (
 		// commonName  the fully qualified domain name (FQDN)
 		commonName string
 
-		// signature conatins signature algorithm
+		// signature contains signature algorithm
 		signature string
 
 		// signatureAlgorithm contains parsed signature algorith
@@ -161,6 +163,7 @@ var (
 	ErrPublicKeyLabelEmpty   = errors.New("Public key label must not be empty")
 	ErrTooManyArguments      = errors.New("Too many arguments")
 	ErrUnknownKeyType        = errors.New("Unknown key type")
+	ErrWrongKeySize          = errors.New("Wrong key size")
 )
 
 var (
@@ -208,11 +211,11 @@ func newSlotsCmd() Command {
 
 func (*slotsCmd) Name() string { return Slots }
 
-func (self *slotsCmd) Verify() error {
-	if !self.Parsed() {
+func (c *slotsCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) > 0 {
+	if len(c.Args()) > 0 {
 		return ErrTooManyArguments
 	}
 	return nil
@@ -250,17 +253,17 @@ func newListCmd() Command {
 	return &cmd
 }
 
-func (self *listCmd) Verify() error {
-	if !self.Parsed() {
+func (c *listCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) > 0 {
+	if len(c.Args()) > 0 {
 		return ErrTooManyArguments
 	}
-	if self.class != "" && self.class != "public" && self.class != "private" {
+	if c.class != "" && c.class != "public" && c.class != "private" {
 		return ErrIncorrectArguments
 	}
-	self.verified = true
+	c.verified = true
 	return nil
 }
 
@@ -273,19 +276,19 @@ func newDestroyCmd() Command {
 	return &cmd
 }
 
-func (self *destroyCmd) Verify() error {
-	if !self.Parsed() {
+func (c *destroyCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) < 1 {
+	if len(c.Args()) < 1 {
 		return ErrNotEnoughArguments
 	}
-	for _, a := range self.Args() {
+	for _, a := range c.Args() {
 		if _, err := strconv.Atoi(a); err != nil {
 			return ErrIncorrectArgumentType
 		}
 	}
-	self.verified = true
+	c.verified = true
 	return nil
 }
 
@@ -297,14 +300,14 @@ func newSetPinCmd() Command {
 	return &cmd
 }
 
-func (self *setPinCmd) Verify() error {
-	if !self.Parsed() {
+func (c *setPinCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) > 0 {
+	if len(c.Args()) > 0 {
 		return ErrTooManyArguments
 	}
-	self.verified = true
+	c.verified = true
 	return nil
 }
 
@@ -312,10 +315,10 @@ func newGenerateCmd() Command {
 	cmd := generateCmd{
 		abstractCmd: newAbstractCmd(Generate),
 	}
-	cmd.StringVar(&cmd.keyType, "type", "", "key type: "+KeyECDSA)
-	cmd.StringVar(&cmd.curve, "curve", "",
-		fmt.Sprintf("elliptic curve: %s|%s|%s|%s",
-			cu.CurveP224, cu.CurveP256, cu.CurveP384, cu.CurveP521))
+	cmd.StringVar(&cmd.keyType, "type", "", fmt.Sprintf("key type: %s|%s", KeyECDSA, KeyRSA))
+	cmd.IntVar(&cmd.keyBits, "bits", 2048, "key size")
+	cmd.StringVar(&cmd.curve, "curve", "", fmt.Sprintf("elliptic curve: %s|%s|%s|%s",
+		cu.CurveP224, cu.CurveP256, cu.CurveP384, cu.CurveP521))
 	cmd.StringVar(&cmd.publicLabel, "publicLabel", "", "public key label")
 	cmd.StringVar(&cmd.privateLabel, "privateLabel", "", "private key label")
 	cmd.BoolVar(&cmd.token, "token", true, "the token setting for both keys")
@@ -330,36 +333,41 @@ func newGenerateCmd() Command {
 	return &cmd
 }
 
-func (self *generateCmd) Verify() error {
-	if !self.Parsed() {
+func (c *generateCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) > 0 {
+	if len(c.Args()) > 0 {
 		return ErrTooManyArguments
 	}
 
-	if self.keyType == "" {
+	if c.keyType == "" {
 		return ErrKeyTypeEmpty
 	}
-	if self.keyType != KeyECDSA {
+	switch c.keyType {
+	case KeyECDSA:
+		if c.curve == "" {
+			return ErrEllipticCurveEmpty
+		}
+		if !cu.WellKnownCurve(c.curve) {
+			return cu.ErrUnsupportedEllipticCurve
+		}
+	case KeyRSA:
+		if c.keyBits != 2048 && c.keyBits != 4096 {
+			return ErrWrongKeySize
+		}
+	default:
 		return ErrUnknownKeyType
 	}
 
-	if self.curve == "" {
-		return ErrEllipticCurveEmpty
-	}
-	if !cu.WellKnownCurve(self.curve) {
-		return cu.ErrUnsupportedEllipticCurve
-	}
-
-	if self.publicLabel == "" {
+	if c.publicLabel == "" {
 		return ErrPublicKeyLabelEmpty
 	}
-	if self.privateLabel == "" {
+	if c.privateLabel == "" {
 		return ErrPrivateKeyLabelEmpty
 	}
 
-	self.verified = true
+	c.verified = true
 	return nil
 }
 
@@ -410,53 +418,52 @@ func newCsrCmd() Command {
 	cmd.StringVar(&cmd.ip, "ip", "", "comma separated SAN IP addresses")
 
 	defaultSignatureName, _ := cu.GetSignatureAlgorithmName(DefaultSignatureAlgorithm)
-	cmd.StringVar(&cmd.signature, "signature", defaultSignatureName,
-		fmt.Sprintf("signature algorithm: %s",
-			strings.Join(cu.GetSupportedSignatureAlgorithmNames(), "|")))
+	cmd.StringVar(&cmd.signature, "signature", defaultSignatureName, fmt.Sprintf("signature algorithm: %s",
+		strings.Join(cu.GetSupportedSignatureAlgorithmNames(), "|")))
 
 	cmd.exec = cmd.execFunc
 	return &cmd
 }
 
-func (self *csrCmd) Verify() error {
-	if !self.Parsed() {
+func (c *csrCmd) Verify() error {
+	if !c.Parsed() {
 		return ErrMustBeParsed
 	}
-	if len(self.Args()) > 0 {
+	if len(c.Args()) > 0 {
 		return ErrTooManyArguments
 	}
-	if self.publicLabel == "" {
+	if c.publicLabel == "" {
 		return ErrPublicKeyLabelEmpty
 	}
-	if self.privateLabel == "" {
+	if c.privateLabel == "" {
 		return ErrPrivateKeyLabelEmpty
 	}
-	if self.commonName == "" {
+	if c.commonName == "" {
 		return ErrCommonNameEmpty
 	}
 
 	var err error
-	if self.signatureAlgorithm,
-		err = cu.GetSignatureAlgorithmByName(self.signature); err != nil {
+	if c.signatureAlgorithm,
+		err = cu.GetSignatureAlgorithmByName(c.signature); err != nil {
 		return err
 	}
 
 	r := regexp.MustCompile("\\s")
 
-	if self.dns != "" {
-		self.dnsNames = strings.Split(r.ReplaceAllString(self.dns, ""), ",")
+	if c.dns != "" {
+		c.dnsNames = strings.Split(r.ReplaceAllString(c.dns, ""), ",")
 	}
 
-	if self.ip != "" {
-		for _, s := range strings.Split(r.ReplaceAllString(self.ip, ""), ",") {
+	if c.ip != "" {
+		for _, s := range strings.Split(r.ReplaceAllString(c.ip, ""), ",") {
 			ip := net.ParseIP(s)
 			if ip == nil {
 				return fmt.Errorf("invalid IP address: %s", s)
 			}
-			self.ipAddresses = append(self.ipAddresses, ip)
+			c.ipAddresses = append(c.ipAddresses, ip)
 		}
 	}
 
-	self.verified = true
+	c.verified = true
 	return nil
 }

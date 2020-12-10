@@ -8,6 +8,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/miekg/pkcs11"
@@ -21,6 +22,32 @@ const (
 )
 
 var ErrUnsupportedEllipticCurve = errors.New("unsupported elliptic curve")
+
+type ecdsaPrivateKey struct {
+	*privateKey
+}
+
+// Sign signs the digest
+func (k *ecdsaPrivateKey) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	handle := k.ctx.handle
+	session := k.ctx.session
+
+	mechanism := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}
+	if err := handle.SignInit(session, mechanism, k.prvHandle); err != nil {
+		return nil, err
+	}
+
+	sigBytes, err := handle.Sign(session, digest)
+	if err != nil {
+		return nil, err
+	}
+
+	sig := DsaSignature{}
+	if err = sig.unmarshalBytes(sigBytes); err != nil {
+		return nil, err
+	}
+	return sig.marshalDER()
+}
 
 // curveInfo conainst elliptic curve info
 type curveInfo struct {

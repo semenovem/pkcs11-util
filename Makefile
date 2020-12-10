@@ -1,16 +1,14 @@
 PROJECTNAME=$(shell basename "$(PWD)")
+
+include project.properties
+
 BASE_DIR:=$(shell pwd)
 PKGS :=$(shell go list ./...)
 
-PROPS_FILE:=project.properties
-PROPS:=version
 APP_NAME_VAR:=vtb.ru/pkcs11-util/internal/cli/command.appVersion
 
 BIN_DIR := $(BASE_DIR)/.bin
 CMD_DIR := $(BASE_DIR)/cmd
-
-IMAGE=hsmc-build
-IMAGE_VERSION=1.0.0
 
 .PHONY: all
 all: help
@@ -51,9 +49,3 @@ export:
 help: Makefile
 	@echo "Choose a command in "$(PROJECTNAME)":"
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
-
-define GET_PROPERTY
-$(2):=`cat $(PROPS_FILE)|grep $(1)|sed 's/.*=\s*//'`
-endef
-
-$(foreach prop, $(PROPS),  $(eval $(call GET_PROPERTY,$(prop),$(shell echo $(prop) | tr a-z A-Z))))

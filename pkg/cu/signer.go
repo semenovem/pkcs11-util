@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"github.com/miekg/pkcs11"
 )
@@ -20,11 +19,6 @@ type privateKey struct {
 	prvHandle pkcs11.ObjectHandle
 	pubHandle pkcs11.ObjectHandle
 	publicKey crypto.PublicKey
-}
-
-// ecdsaPrivateKey contains ECDSA private key
-type ecdsaPrivateKey struct {
-	*privateKey
 }
 
 // NewSigner returns a new Signer instance, which algorithm is defined by the key type
@@ -72,7 +66,7 @@ func NewSigner(ctx *Context, prvLabel, pubLabel string) (Signer, error) {
 			return nil, err
 		}
 		return &ecdsaPrivateKey{
-			privateKey: &privateKey{
+			&privateKey{
 				ctx:       ctx,
 				prvHandle: prvHandle,
 				pubHandle: pubHandle,
@@ -80,32 +74,26 @@ func NewSigner(ctx *Context, prvLabel, pubLabel string) (Signer, error) {
 			},
 		}, nil
 	}
-	return nil, fmt.Errorf("Unsupported key type")
+
+	if publicKeyType == pkcs11.CKK_RSA {
+		publicKey, err := exportRSAPublicKey(ctx, pubHandle)
+		if err != nil {
+			return nil, err
+		}
+		return &rsaPrivateKey{
+			&privateKey{
+				ctx:       ctx,
+				prvHandle: prvHandle,
+				pubHandle: pubHandle,
+				publicKey: publicKey,
+			},
+		}, nil
+	}
+
+	return nil, fmt.Errorf("Unsupported key type: %v", publicKeyType)
 }
 
 // Public return the Signer's public key
-func (self *privateKey) Public() crypto.PublicKey {
-	return self.publicKey
-}
-
-// Sign signs the digest
-func (self *privateKey) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
-	handle := self.ctx.handle
-	session := self.ctx.session
-
-	mechanism := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}
-	if err := handle.SignInit(session, mechanism, self.prvHandle); err != nil {
-		return nil, err
-	}
-
-	sigBytes, err := handle.Sign(session, digest)
-	if err != nil {
-		return nil, err
-	}
-
-	sig := DsaSignature{}
-	if err = sig.unmarshalBytes(sigBytes); err != nil {
-		return nil, err
-	}
-	return sig.marshalDER()
+func (k *privateKey) Public() crypto.PublicKey {
+	return k.publicKey
 }
