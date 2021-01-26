@@ -22,6 +22,7 @@ const (
 	SetPin             = "setpin"
 	Slots              = "slots"
 	Version            = "version"
+	Import             = "import"
 )
 
 // Supported keys
@@ -139,6 +140,13 @@ type (
 		// ipAddresses contains parsed SAN IP addresses
 		ipAddresses []net.IP
 	}
+
+	// importCmd contains Import command arguments
+	importCmd struct {
+		*abstractCmd
+		in    string
+		label string
+	}
 )
 
 var (
@@ -151,12 +159,15 @@ var (
 var (
 	ErrCommonNameEmpty       = errors.New("Common name must not be empty")
 	ErrEllipticCurveEmpty    = errors.New("Elliptic curve must not be empty")
+	ErrFailedToDecodePEM     = errors.New("Failed to decode PEM")
 	ErrIncorrectArgumentType = errors.New("Incorrect argument type")
 	ErrIncorrectArguments    = errors.New("Incorrect argument(s)")
 	ErrKeyTypeEmpty          = errors.New("Key type must not be empty")
+	ErrLabelEmpty            = errors.New("Label must not be empty")
 	ErrMustBeParsed          = errors.New("Must be parsed first")
 	ErrMustBeVerifyed        = errors.New("Must be verified first")
 	ErrNotEnoughArguments    = errors.New("Not enough arguments")
+	ErrPathEmpty             = errors.New("Path must not be empty")
 	ErrPinsDoesNotMatch      = errors.New("Pins does not match")
 	ErrPrivateKeyLabelEmpty  = errors.New("Private key label must not be empty")
 	ErrProcessorMustBeSet    = errors.New("Processor must be set")
@@ -181,6 +192,7 @@ func init() {
 		newSetPinCmd(),
 		newSlotsCmd(),
 		newVersionCmd(),
+		newImportCmd(),
 	}
 	for _, c := range cmds {
 		commands[c.Name()] = c
@@ -462,6 +474,36 @@ func (c *csrCmd) Verify() error {
 			}
 			c.ipAddresses = append(c.ipAddresses, ip)
 		}
+	}
+
+	c.verified = true
+	return nil
+}
+
+func newImportCmd() Command {
+	cmd := importCmd{
+		abstractCmd: newAbstractCmd(Import),
+	}
+	cmd.StringVar(&cmd.in, "in", "", "input file name")
+	cmd.StringVar(&cmd.label, "label", "", "label")
+	cmd.exec = cmd.execFunc
+	return &cmd
+}
+
+func (*importCmd) Name() string { return Import }
+
+func (c *importCmd) Verify() error {
+	if !c.Parsed() {
+		return ErrMustBeParsed
+	}
+	if len(c.Args()) > 0 {
+		return ErrTooManyArguments
+	}
+	if c.in == "" {
+		return ErrPathEmpty
+	}
+	if c.label == "" {
+		return ErrLabelEmpty
 	}
 
 	c.verified = true

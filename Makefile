@@ -30,12 +30,12 @@ build: test
           -o $(BIN_DIR)/hsmc \
           cmd/hsmc/*.go
 
-## docker: builds the HSM command line tool in the container
+## docker: builds the HSM command line tool in container
 .PHONY: docker
 docker:
 	docker build . -t $(IMAGE):$(IMAGE_VERSION)
 
-## export: exports the HSM command line tool from the container
+## export: exports the HSM command line tool from container
 .PHONY: export
 export:
 	$(eval cid:=`docker create $(IMAGE):$(IMAGE_VERSION)`)

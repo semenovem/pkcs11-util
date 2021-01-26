@@ -1,6 +1,7 @@
 package cu
 
 import (
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/binary"
 	"fmt"
@@ -8,7 +9,30 @@ import (
 	"github.com/miekg/pkcs11"
 )
 
-// FindObjects returns PKCS11 Object handels specified by the template
+// ImportCertificate imports the certificate cert.
+func ImportCertificate(ctx *Context, label string, cert *x509.Certificate) (res pkcs11.ObjectHandle, err error) {
+	serial, err := asn1.Marshal(cert.SerialNumber)
+	if err != nil {
+		return
+	}
+
+	template := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, cert.RawSubject),
+		pkcs11.NewAttribute(pkcs11.CKA_ISSUER, cert.RawIssuer),
+		pkcs11.NewAttribute(pkcs11.CKA_SERIAL_NUMBER, serial),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, cert.Raw),
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(label)),
+	}
+
+	res, err = ctx.handle.CreateObject(ctx.session, template)
+	return
+}
+
+// FindObjects returns PKCS11 Object handles specified by the template
 func FindObjects(ctx *Context, template ...*pkcs11.Attribute) ([]pkcs11.ObjectHandle, error) {
 	if err := ctx.handle.FindObjectsInit(ctx.session, template); err != nil {
 		return nil, err

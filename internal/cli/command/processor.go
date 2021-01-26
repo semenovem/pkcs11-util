@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -309,5 +310,38 @@ func (c *csrCmd) execFunc() (err error) {
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csrCertificate,
 	})
+	return
+}
+
+func (c *importCmd) execFunc() (err error) {
+	f, err := ioutil.ReadFile(c.in)
+	if err != nil {
+		return
+	}
+	block, _ := pem.Decode(f)
+	if block == nil || block.Type != "CERTIFICATE" {
+		err = ErrFailedToDecodePEM
+		return
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return
+	}
+
+	attrs := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(c.label))}
+	objs, err := cu.FindObjects(c.ctx, attrs...)
+	if err != nil {
+		return
+	}
+	if len(objs) > 0 {
+		err = fmt.Errorf("Label already in use: %s", c.label)
+		return
+	}
+
+	handle, err := cu.ImportCertificate(c.ctx, c.label, cert)
+	if err != nil {
+		return
+	}
+	fmt.Printf("handle=%v\t\tlabel=%s\n", handle, c.label)
 	return
 }
