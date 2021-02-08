@@ -22,7 +22,8 @@ const (
 	SetPin             = "setpin"
 	Slots              = "slots"
 	Version            = "version"
-	Import             = "import"
+	ImportCertificate  = "importCertificate"
+	ImportKey          = "importKey"
 )
 
 // Supported keys
@@ -141,8 +142,15 @@ type (
 		ipAddresses []net.IP
 	}
 
-	// importCmd contains Import command arguments
-	importCmd struct {
+	// importCertificateCmd contains ImportCertificate command arguments
+	importCertificateCmd struct {
+		*abstractCmd
+		in    string
+		label string
+	}
+
+	// importKeyCmd contains ImportKey command arguments
+	importKeyCmd struct {
 		*abstractCmd
 		in    string
 		label string
@@ -192,7 +200,8 @@ func init() {
 		newSetPinCmd(),
 		newSlotsCmd(),
 		newVersionCmd(),
-		newImportCmd(),
+		newImportCertificateCmd(),
+		newImportKeyCmd(),
 	}
 	for _, c := range cmds {
 		commands[c.Name()] = c
@@ -480,9 +489,9 @@ func (c *csrCmd) Verify() error {
 	return nil
 }
 
-func newImportCmd() Command {
-	cmd := importCmd{
-		abstractCmd: newAbstractCmd(Import),
+func newImportCertificateCmd() Command {
+	cmd := importCertificateCmd{
+		abstractCmd: newAbstractCmd(ImportCertificate),
 	}
 	cmd.StringVar(&cmd.in, "in", "", "input file name")
 	cmd.StringVar(&cmd.label, "label", "", "label")
@@ -490,9 +499,39 @@ func newImportCmd() Command {
 	return &cmd
 }
 
-func (*importCmd) Name() string { return Import }
+func (*importCertificateCmd) Name() string { return ImportCertificate }
 
-func (c *importCmd) Verify() error {
+func (c *importCertificateCmd) Verify() error {
+	if !c.Parsed() {
+		return ErrMustBeParsed
+	}
+	if len(c.Args()) > 0 {
+		return ErrTooManyArguments
+	}
+	if c.in == "" {
+		return ErrPathEmpty
+	}
+	if c.label == "" {
+		return ErrLabelEmpty
+	}
+
+	c.verified = true
+	return nil
+}
+
+func newImportKeyCmd() Command {
+	cmd := importKeyCmd{
+		abstractCmd: newAbstractCmd(ImportKey),
+	}
+	cmd.StringVar(&cmd.in, "in", "", "input file name")
+	cmd.StringVar(&cmd.label, "label", "", "label")
+	cmd.exec = cmd.execFunc
+	return &cmd
+}
+
+func (*importKeyCmd) Name() string { return ImportKey }
+
+func (c *importKeyCmd) Verify() error {
 	if !c.Parsed() {
 		return ErrMustBeParsed
 	}

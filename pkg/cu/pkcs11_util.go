@@ -1,6 +1,7 @@
 package cu
 
 import (
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/binary"
@@ -25,6 +26,26 @@ func ImportCertificate(ctx *Context, label string, cert *x509.Certificate) (res 
 		pkcs11.NewAttribute(pkcs11.CKA_ISSUER, cert.RawIssuer),
 		pkcs11.NewAttribute(pkcs11.CKA_SERIAL_NUMBER, serial),
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, cert.Raw),
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(label)),
+	}
+
+	res, err = ctx.handle.CreateObject(ctx.session, template)
+	return
+}
+
+// ImportRSAPublicKey imports the RSA public key k.
+func ImportRSAPublicKey(ctx *Context, label string, key *rsa.PublicKey) (res pkcs11.ObjectHandle, err error) {
+	modulus := key.N.Bytes()
+	exponent := make([]byte, 4)
+	binary.BigEndian.PutUint32(exponent, uint32(key.E))
+
+	template := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_MODULUS, modulus),
+		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, exponent),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(label)),
 	}
 

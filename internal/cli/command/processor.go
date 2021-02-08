@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -313,7 +315,7 @@ func (c *csrCmd) execFunc() (err error) {
 	return
 }
 
-func (c *importCmd) execFunc() (err error) {
+func (c *importCertificateCmd) execFunc() (err error) {
 	f, err := ioutil.ReadFile(c.in)
 	if err != nil {
 		return
@@ -339,9 +341,46 @@ func (c *importCmd) execFunc() (err error) {
 	}
 
 	handle, err := cu.ImportCertificate(c.ctx, c.label, cert)
+	if err == nil {
+		fmt.Printf("handle=%v\t\tlabel=%s\n", handle, c.label)
+	}
+	return
+}
+
+func (c *importKeyCmd) execFunc() (err error) {
+	f, err := ioutil.ReadFile(c.in)
 	if err != nil {
 		return
 	}
-	fmt.Printf("handle=%v\t\tlabel=%s\n", handle, c.label)
+	block, _ := pem.Decode(f)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		err = ErrFailedToDecodePEM
+		return
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return
+	}
+
+	attrs := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(c.label))}
+	objs, err := cu.FindObjects(c.ctx, attrs...)
+	if err != nil {
+		return
+	}
+	if len(objs) > 0 {
+		err = fmt.Errorf("Label already in use: %s", c.label)
+		return
+	}
+
+	var handle pkcs11.ObjectHandle
+	switch k := key.(type) {
+	case *rsa.PublicKey:
+		handle, err = cu.ImportRSAPublicKey(c.ctx, c.label, k)
+	default:
+		err = errors.New("Unsupported key type")
+	}
+	if err == nil {
+		fmt.Printf("handle=%v\t\tlabel=%s\n", handle, c.label)
+	}
 	return
 }

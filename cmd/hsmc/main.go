@@ -30,7 +30,8 @@ func usage() {
 		command.CertificateRequest,
 		command.Destroy,
 		command.SetPin,
-		command.Import,
+		command.ImportCertificate,
+		command.ImportKey,
 	}, "|")
 	app := os.Args[0]
 	fmt.Printf(format, app, commands, app)
