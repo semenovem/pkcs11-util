@@ -66,13 +66,13 @@ func NewContext(soPath string, opts ...ContextOpt) (context *Context, err error)
 		}
 
 		var ti pkcs11.TokenInfo
-		for i, slot := range slots {
+		for _, slot := range slots {
 			ti, err = handle.GetTokenInfo(slot)
 			if err != nil {
 				return
 			}
 			if ti.Label == co.slotLabel {
-				co.slotID = uint(i)
+				co.slotID = slot
 				break
 			}
 		}

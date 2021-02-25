@@ -44,8 +44,8 @@ func (c *slotsCmd) Execute() (err error) {
 		if err != nil {
 			return
 		}
-		fmt.Printf("%3d Label=%-16s ManufacturerID=%s Model=%s SerialNumber=%s\n",
-			i, ti.Label, ti.ManufacturerID, ti.Model, ti.SerialNumber)
+		fmt.Printf("%3d id=%d Label=%-16s ManufacturerID=%s Model=%s SerialNumber=%s\n",
+			i, slot, ti.Label, ti.ManufacturerID, ti.Model, ti.SerialNumber)
 	}
 	return
 }

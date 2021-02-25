@@ -186,10 +186,11 @@ var (
 )
 
 var (
-	DefaultLib = "/usr/safenet/lunaclient/lib/libCryptoki2_64.so"
+	// PKCS11 library path on host
+	DefaultLib = ""
 )
 
-var commands map[string]Command = make(map[string]Command)
+var commands = make(map[string]Command)
 
 func init() {
 	cmds := []Command{

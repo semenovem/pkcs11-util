@@ -11,7 +11,10 @@ RUN wget https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz \
 RUN mkdir -p /src
 COPY ./ /src
 
+ARG PKCS11_HOST_LIB
+ENV PKCS11_HOST_LIB=${PKCS11_HOST_LIB}
+
 RUN \
  PATH=$PATH:/usr/local/go/bin \
  && cd /src \
- && make build  
+ && make build

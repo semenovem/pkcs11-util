@@ -45,7 +45,7 @@ func main() {
 
 	cmd := command.Get(os.Args[1])
 	if cmd == nil {
-		fmt.Fprintf(os.Stderr, "Command not found: %s", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Command not found: %s\n", os.Args[1])
 		os.Exit(ExitStatusCommandNotFound)
 	}
 
