@@ -61,6 +61,10 @@ func (c *abstractCmd) beforeFunc() (err error) {
 		c.pin = string(pin)
 	}
 
+	if c.lib == "" {
+	    return fmt.Errorf("pkcs11 library path not specified")
+    }
+
 	c.ctx, err = cu.NewContext(
 		c.lib,
 		cu.WithSlotLabel(c.slot), cu.WithSlotPin(c.pin))
@@ -109,7 +113,8 @@ func (c *listCmd) execFunc() error {
 	}
 
 	if len(objs) == 0 {
-		return fmt.Errorf("Objects not found")
+        fmt.Print("Objects not found\n")
+        return nil
 	}
 
 	template := []*pkcs11.Attribute{
