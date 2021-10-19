@@ -37,8 +37,14 @@ func usage() {
   fmt.Printf(format, app, commands, app)
 }
 
+var tmp = 2
+
 func main() {
-  if len(os.Args) < 2 || os.Args[1] == "help" || os.Args[1] == "-help" {
+  //if tmp > 0 {
+  //  os.Exit(0)
+  //}
+
+  if os.Args[1] == "help" || os.Args[1] == "-help" {
     usage()
     os.Exit(ExitStatusUsage)
   }

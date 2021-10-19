@@ -1,7 +1,7 @@
 
 *.swp
 .*
-hsmc
+#hsmc
 
 !.gitignore
 !.editorconfig

@@ -31,7 +31,7 @@ build: test
         go build \
           -ldflags="-X $(APP_VERSION_VAR)=$(VERSION) -X $(PKCS11_HOST_LIB_VAR)=$(PKCS11_HOST_LIB) -s -w" \
           -mod vendor \
-          -o $(BIN_DIR)/hsmc \
+          -o "$(DEST_DIR)/hsmc" \
           cmd/hsmc/*.go
 
 ## docker: builds the HSM command line tool in container

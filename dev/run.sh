@@ -16,4 +16,5 @@ go run \
     -ldflags="-X "${APP_VERSION_VAR}=${VERSION}" -X "${PKCS11_HOST_LIB_VAR}=${PKCS11_HOST_LIB}" -s -w" \
     -mod vendor \
     ../cmd/hsmc/*.go \
-    $* -s "$__HSM_SLOT__" -p "$__HSM_PIN__"
+    $* \
+    -s "$__HSM_SLOT__" -p "$__HSM_PIN__"

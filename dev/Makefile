@@ -9,7 +9,7 @@ help: Makefile
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 
 
-## docker: builds the HSM command line tool in container
+## docker builds the HSM command line tool in container
 .PHONY: docker
 docker:
 	docker build . -t $(IMG) -f Dockerfile
@@ -23,3 +23,7 @@ dev:
 		-v $(PWD)/..:/app:ro \
 		$(IMG) bash
 
+## hsmc - собрать утилиту hsmc из текущего кода
+.PHONY: hsmc
+hsmc:
+	@make -C ../ DEST_DIR=/tmp PKCS11_HOST_LIB=/usr/lib64/libsofthsm2.so build
