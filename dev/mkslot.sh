@@ -10,4 +10,11 @@ softhsm2-util --init-token --slot 0 \
 
 [ $? -ne 0 ] && exit 1
 
+softhsm2-util --init-token --slot 1 \
+  --label "${__HSM_SLOT__}--2" \
+  --pin "$__HSM_PIN__" \
+  --so-pin 1212
+
+[ $? -ne 0 ] && exit 1
+
 exit 0

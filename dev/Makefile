@@ -21,7 +21,7 @@ dev:
 		--name pkcs11-util-dev \
 		-w /app/dev \
 		-v $(PWD)/..:/app:ro \
-		$(IMG) bash
+		$(IMG) bash -c 'bash ./mkslot.sh && bash'
 
 ## hsmc - собрать утилиту hsmc из текущего кода
 .PHONY: hsmc
